@@ -36,6 +36,13 @@ final class OverlayWindow: NSWindow {
         contentView = root
     }
 
+    /// macOS rückt Fenster sonst zurecht, damit sie auf "ihren" Bildschirm passen.
+    /// Für ein Overlay, das genau auf einem bestimmten Schirm sitzen soll, wäre das
+    /// eine stille Verschiebung — also übernehmen wir den Rahmen unverändert.
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        frameRect
+    }
+
     override var canBecomeKey: Bool { interactive }
     override var canBecomeMain: Bool { false }
 
@@ -55,6 +62,14 @@ final class OverlayWindow: NSWindow {
     var screenRects: [CGRect] {
         let origin = frame.origin
         return NSScreen.screens.map { $0.frame.offsetBy(dx: -origin.x, dy: -origin.y) }
+    }
+
+    /// Der Bildschirm, auf dem gerade der Mauszeiger steht — die beste Vermutung
+    /// darüber, wohin die Person gerade schaut.
+    static func screenUnderPointer() -> NSScreen? {
+        let pointer = NSEvent.mouseLocation
+        if let hit = NSScreen.screens.first(where: { $0.frame.contains(pointer) }) { return hit }
+        return NSScreen.main ?? NSScreen.screens.first
     }
 
     /// Rechteck, das alle angeschlossenen Bildschirme umschließt.

@@ -16,7 +16,7 @@ enum Artwork {
 
     /// Auf großen Bildschirmen wachsen Tiere und Schilder mit, damit sie nicht verloren wirken.
     static var displayScale: CGFloat {
-        let height = NSScreen.main?.frame.height ?? 900
+        let height = OverlayWindow.screenUnderPointer()?.frame.height ?? 900
         return min(max(height / 900, 1.0), 1.7)
     }
 

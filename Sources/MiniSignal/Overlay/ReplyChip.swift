@@ -30,14 +30,11 @@ final class ReplyChip: NSViewController {
 
     private func present() {
         let size = NSSize(width: 360, height: 118)
-        let window = OverlayWindow(interactive: true)
-        let screen = window.activeScreenRect
-        window.setFrame(
-            NSRect(x: window.frame.minX + screen.maxX - size.width - 28,
-                   y: window.frame.minY + screen.minY + 96,
-                   width: size.width, height: size.height),
-            display: false
-        )
+        guard let screen = OverlayWindow.screenUnderPointer() else { return }
+        let frame = NSRect(x: screen.frame.maxX - size.width - 28,
+                           y: screen.frame.minY + 96,
+                           width: size.width, height: size.height)
+        let window = OverlayWindow(interactive: true, frame: frame)
 
         let blur = NSVisualEffectView(frame: NSRect(origin: .zero, size: size))
         blur.material = .hudWindow

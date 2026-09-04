@@ -95,6 +95,19 @@ von selbst auf.
 | 🦕 Dino | schwere Schritte | | |
 | 🦥 Faultier | hängt am Ast, 20 Sekunden | | |
 
+## Mehrere Monitore
+
+Der Bote läuft auf dem Bildschirm, auf dem gerade der Mauszeiger steht — jedes
+Overlay ist ein eigenes Fenster, das exakt auf diesen einen Monitor passt. Beim SOS
+blinkt dagegen jeder angeschlossene Bildschirm, die Karte erscheint auf dem aktiven.
+
+Wenn Boten unsichtbar bleiben oder am falschen Rand kleben, zeigt dieser Befehl die
+Bildschirmanordnung und alle Bahnhöhen:
+
+```bash
+MINISIGNAL_DIAGNOSE=1 /Applications/MiniSignal.app/Contents/MacOS/MiniSignal
+```
+
 ## Mehr als zwei Geräte
 
 Es dürfen beliebig viele mitmachen — alle mit demselben Paar-Code bilden einen Kreis

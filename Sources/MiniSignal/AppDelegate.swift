@@ -233,6 +233,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func runDemoIfRequested() {
         let env = ProcessInfo.processInfo.environment
 
+        if env["MINISIGNAL_DIAGNOSE"] != nil {
+            Diagnose.run()
+            NSApp.terminate(nil)
+            return
+        }
+
         if let sheet = env["MINISIGNAL_SPRITESHEET"] {
             if let list = env["MINISIGNAL_SPRITESHEET_EMOJI"], !list.isEmpty {
                 SpriteSheet.writeEmoji(list.components(separatedBy: ","), to: sheet)

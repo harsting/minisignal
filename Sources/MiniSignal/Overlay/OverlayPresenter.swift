@@ -21,11 +21,17 @@ final class OverlayPresenter {
 
     /// Ein Bote trägt die Nachricht über den Bildschirm.
     func deliver(text: String, sender: String, carrier: Carrier, offerReply: Bool = false) {
-        let window = OverlayWindow(interactive: false)
+        // Ein Fenster genau auf dem Bildschirm, an dem gearbeitet wird. Ein einziges
+        // Fenster über alle Schirme hinweg ginge schief, sobald die Monitore
+        // unterschiedlich hoch sind: das Hüllrechteck enthält dann Flächen, die auf
+        // keinem Monitor liegen — und dort wäre der Bote unsichtbar.
+        guard let screen = OverlayWindow.screenUnderPointer() else { return }
+        let window = OverlayWindow(interactive: false, frame: screen.frame)
         window.present()
 
         let stage = window.stage
-        stage.frame = CGRect(origin: .zero, size: window.frame.size)
+        let bounds = CGRect(origin: .zero, size: screen.frame.size)
+        stage.frame = bounds
 
         let laneOffset = CGFloat(slots.count % 3) * 46
         let animator = CarrierAnimator(carrier: carrier, text: text, sender: sender)
@@ -34,7 +40,7 @@ final class OverlayPresenter {
 
         Sounds.playArrival()
 
-        animator.run(on: stage, in: window.activeScreenRect, laneOffset: laneOffset) { [weak self] in
+        animator.run(on: stage, in: bounds, laneOffset: laneOffset) { [weak self] in
             window.orderOut(nil)
             self?.slots[key] = nil
             if offerReply, let reply = self?.onReply {
