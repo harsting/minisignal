@@ -233,6 +233,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func runDemoIfRequested() {
         let env = ProcessInfo.processInfo.environment
 
+        if let iconset = env["MINISIGNAL_ICONSET"] {
+            IconMaker.writeIconset(to: iconset)
+            NSApp.terminate(nil)
+            return
+        }
+
         if env["MINISIGNAL_DIAGNOSE"] != nil {
             Diagnose.run()
             NSApp.terminate(nil)
@@ -253,8 +259,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let outgoing = env["MINISIGNAL_SEND"]
         guard demo != nil || outgoing != nil else { return }
 
+        if env["MINISIGNAL_DEMO_BACKDROP"] != nil {
+            DemoBackdrop.show()
+        }
+
         if let demo, outgoing == nil {
             let text = env["MINISIGNAL_DEMO_TEXT"] ?? "Kaffee ist fertig, kommst du hoch? ☕️"
+            let who = env["MINISIGNAL_DEMO_SENDER"] ?? "Testfrau"
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
                 guard let self else { return }
                 if demo == "popover" {
@@ -264,9 +275,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 } else if demo == "invite" {
                     self.openInvite()
                 } else if demo == "sos" {
-                    self.overlays.raiseSOS(from: "Testfrau") {}
+                    self.overlays.raiseSOS(from: who) {}
                 } else {
-                    self.overlays.deliver(text: text, sender: "Testfrau",
+                    self.overlays.deliver(text: text, sender: who,
                                           carrier: Carriers.with(id: demo))
                 }
             }

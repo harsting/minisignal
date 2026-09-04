@@ -1,43 +1,63 @@
+<img src="docs/icon.png" width="110" align="right" alt="MiniSignal">
+
 # MiniSignal
 
-Eine kleine Nachrichten-App für genau zwei Macs im selben WLAN.
-Wer etwas schreibt, schickt kein Notification-Fenster los, sondern ein Tier: die
-Nachricht wird über den Desktop des anderen getragen — von einer Schildkröte, einem
-hüpfenden Hasen, einem watschelnden Pinguin, einem Luftballon mit Zettel an der
-Schnur oder einem Flugzeug mit Schleppbanner. 18 Boten stehen zur Auswahl, 🎲 würfelt
-jedes Mal neu.
+**Kurznachrichten, die von Tieren über den Desktop getragen werden.**
+Für Macs im selben WLAN — kein Server, kein Konto, nichts im Internet.
 
-Dazu gibt es einen SOS-Knopf: der lässt beim anderen sofort den ganzen Bildschirm
-rot blinken.
+![Eine Schildkröte trägt eine Nachricht über den Desktop](docs/screenshots/bote.png)
 
-Kein Server, kein Account, kein Internet. Die beiden Macs reden direkt miteinander.
+Du tippst oben in der Menüleiste eine Zeile, und drüben spaziert sie über den
+Bildschirm: eine Schildkröte mit Schild auf dem Panzer, ein hüpfender Hase, ein
+Flugzeug mit Schleppbanner. 18 Boten stehen zur Auswahl, 🎲 würfelt jedes Mal neu.
+Dazu ein SOS-Knopf, der beim anderen sofort den ganzen Bildschirm rot blinken lässt.
 
----
+Der Desktop bleibt dabei ganz normal bedienbar — die Overlays lassen Mausklicks
+durch, und die Animation läuft in Core Animation, kostet also kaum Rechenzeit.
 
-## Installation (auf **jedem** der beiden Macs einmal)
+![Ein Flugzeug zieht die Nachricht als Schleppbanner hinter sich her](docs/screenshots/flugzeug.png)
 
-Vorausgesetzt sind nur die Command Line Tools (`xcode-select --install`), kein Xcode.
+<table>
+<tr>
+<td width="34%"><img src="docs/screenshots/fenster.png" alt="Das Fenster in der Menüleiste"></td>
+<td><img src="docs/screenshots/sos.png" alt="Beim SOS blinkt der ganze Bildschirm rot"></td>
+</tr>
+<tr>
+<td><em>Schreiben und Boten wählen</em></td>
+<td><em>SOS: der ganze Bildschirm blinkt rot, bis der andere klickt</em></td>
+</tr>
+</table>
+
+## Installation
+
+**Fertige App:** das ZIP aus dem [neuesten Release](https://github.com/harsting/minisignal/releases/latest)
+laden, `MiniSignal.app` nach *Programme* ziehen, öffnen.
+
+macOS meldet beim ersten Start, es könne die App nicht auf Schadsoftware prüfen —
+sie ist nicht bei Apple registriert, weil sie niemand verkauft. Dann in
+*Systemeinstellungen → Datenschutz & Sicherheit* ganz nach unten scrollen und auf
+**„Trotzdem öffnen"** klicken. Nur beim ersten Mal.
+
+**Selbst bauen** (braucht nur die Command Line Tools, kein Xcode):
 
 ```bash
-./build.sh
-open MiniSignal.app
+git clone https://github.com/harsting/minisignal.git
+cd minisignal && ./build.sh && open MiniSignal.app
 ```
 
-Beim ersten Start öffnet sich die Einrichtung:
+### Einrichtung
 
-- **Name** — wie du beim anderen angezeigt wirst.
-- **Paar-Code** — muss auf beiden Macs **exakt gleich** sein. Er verschlüsselt die
-  Nachrichten und sorgt dafür, dass niemand sonst im WLAN mitlesen oder euch
-  etwas schicken kann. Denkt euch etwas aus, das nur ihr kennt.
-- Optional: Töne und Start bei der Anmeldung.
+Beim ersten Start fragt die App nach:
 
-Danach fragt macOS einmal, ob MiniSignal **nach Geräten im lokalen Netzwerk suchen**
-darf. Das muss erlaubt werden — sonst finden sich die beiden Macs nie.
-Nachträglich änderbar unter *Systemeinstellungen → Datenschutz & Sicherheit →
-Lokales Netzwerk*.
+- **Name** — wie du bei den anderen angezeigt wirst.
+- **Paar-Code** — muss auf allen Geräten **exakt gleich** sein. Er verschlüsselt die
+  Nachrichten und sorgt dafür, dass sonst niemand im WLAN mitliest oder euch etwas
+  schickt. Denkt euch etwas aus, das nur ihr kennt.
+- Optional: Töne, Kurzbefehl, Start bei der Anmeldung.
 
-Damit die App nach dem Neustart wieder da ist: in der Einrichtung
-„Beim Anmelden starten" ankreuzen.
+Danach fragt macOS einmal, ob MiniSignal **im lokalen Netzwerk nach Geräten suchen**
+darf. Das muss erlaubt werden — sonst finden sich die Macs nie. Nachträglich änderbar
+unter *Systemeinstellungen → Datenschutz & Sicherheit → Lokales Netzwerk*.
 
 ## Updates
 
@@ -130,19 +150,6 @@ Der Text enthält euren Paar-Code. Wer ihn hat, kann mitschreiben und mitlesen �
 nur an Leute schicken, die dazugehören sollen. Soll jemand die App bloß für sich und
 seinen eigenen Partner nutzen, gibt er beim Einrichten einfach einen eigenen Code ein.
 
-## Eine Version zum Herunterladen bauen
-
-```bash
-./release.sh
-```
-
-Das baut die App und packt sie als `MiniSignal-<version>.zip`. Das Skript zeigt am
-Ende den `gh release create`-Befehl zum Hochladen. Weil die App nicht bei Apple
-notarisiert ist, blockiert macOS sie beim ersten Öffnen. Der Empfänger muss dann in
-*Systemeinstellungen → Datenschutz & Sicherheit* auf „Trotzdem öffnen" klicken —
-der Rechtsklick-auf-Öffnen-Trick funktioniert seit macOS 15 nicht mehr. Das steht so
-auch im Einladungstext.
-
 ## Technik in drei Sätzen
 
 Jede Instanz meldet sich per Bonjour als `_minisignal._tcp` im lokalen Netz an und
@@ -153,6 +160,22 @@ entschlüsseln lassen oder älter als zwei Minuten sind, werden verworfen.
 Die Overlays sind randlose, mausdurchlässige Fenster über allen Spaces, deren
 Animation komplett in Core Animation läuft — der Desktop bleibt bedienbar und der
 Akku unbeeindruckt.
+
+## Für Entwickler
+
+| Befehl | wozu |
+|---|---|
+| `./build.sh` | baut `MiniSignal.app` im Projektordner |
+| `./update.command` | holt, baut, installiert nach `/Applications`, startet neu |
+| `./release.sh` | packt ein ZIP fürs GitHub-Release |
+| `./make_icon.sh` | zeichnet `Resources/MiniSignal.icns` neu |
+| `MINISIGNAL_DIAGNOSE=1 …/MiniSignal` | Bildschirmanordnung und Bahnhöhen ausgeben |
+| `MINISIGNAL_SPRITESHEET=/tmp/b.png …/MiniSignal` | alle Boten mit Laufrichtung als Bild |
+
+Weitere Schalter für Tests: `MINISIGNAL_SUITE` trennt die Einstellungen (mehrere
+Instanzen auf einem Mac), `MINISIGNAL_DEMO=<bote|sos|popover>` zeigt etwas lokal,
+`MINISIGNAL_DEMO_BACKDROP=1` legt eine neutrale Fläche darunter (für Screenshots),
+`MINISIGNAL_MUTE=1` schaltet Töne ab.
 
 ## Beide Rollen auf einem Mac testen
 
@@ -185,6 +208,19 @@ open /tmp/boten.png
 
 Das rendert alle Boten nebeneinander mit ihrer eingestellten Laufrichtung.
 Für eigene Bilddateien gibt es alternativ `mirrored: true`, das spiegelt das Sprite.
+
+## Eine Version zum Herunterladen bauen
+
+```bash
+./release.sh
+```
+
+Das baut die App und packt sie als `MiniSignal-<version>.zip`. Das Skript zeigt am
+Ende den `gh release create`-Befehl zum Hochladen. Weil die App nicht bei Apple
+notarisiert ist, blockiert macOS sie beim ersten Öffnen. Der Empfänger muss dann in
+*Systemeinstellungen → Datenschutz & Sicherheit* auf „Trotzdem öffnen" klicken —
+der Rechtsklick-auf-Öffnen-Trick funktioniert seit macOS 15 nicht mehr. Das steht so
+auch im Einladungstext.
 
 ## Wenn es klemmt
 

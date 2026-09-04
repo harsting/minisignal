@@ -17,6 +17,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 cp "$BUILD_DIR/$APP_NAME" "$APP/Contents/MacOS/$APP_NAME"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+cp Resources/MiniSignal.icns "$APP/Contents/Resources/MiniSignal.icns"
 [ -d Resources/Carriers ] && cp -R Resources/Carriers "$APP/Contents/Resources/"
 
 echo "==> Signiere (ad hoc) ..."
