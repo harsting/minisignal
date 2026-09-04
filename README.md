@@ -39,6 +39,22 @@ Lokales Netzwerk*.
 Damit die App nach dem Neustart wieder da ist: in der Einrichtung
 „Beim Anmelden starten" ankreuzen.
 
+## Updates
+
+Das Projekt liegt auf GitHub. Auf **jedem** Mac genügt danach ein Doppelklick auf
+`update.command` — das holt die neue Version, baut sie und startet MiniSignal neu.
+
+Auf dem Mac deiner Frau einmalig einrichten:
+
+```bash
+git clone <REPO-URL> ~/Desktop/minisignaltool
+cd ~/Desktop/minisignaltool && ./build.sh && open MiniSignal.app
+```
+
+Danach reicht `update.command`. Weil das Repo öffentlich ist, braucht ihr Mac dafür
+keine Anmeldung. Im Repo steht nichts Vertrauliches: euer Paar-Code liegt nur lokal
+in den Einstellungen des jeweiligen Macs, nie im Code.
+
 ## Bedienung
 
 | | |
