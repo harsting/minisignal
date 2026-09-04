@@ -125,8 +125,10 @@ seinen eigenen Partner nutzen, gibt er beim Einrichten einfach einen eigenen Cod
 
 Das baut die App und packt sie als `MiniSignal-<version>.zip`. Das Skript zeigt am
 Ende den `gh release create`-Befehl zum Hochladen. Weil die App nicht bei Apple
-notarisiert ist, muss der Empfänger sie beim ersten Mal per Rechtsklick → Öffnen
-starten; das steht so auch im Einladungstext.
+notarisiert ist, blockiert macOS sie beim ersten Öffnen. Der Empfänger muss dann in
+*Systemeinstellungen → Datenschutz & Sicherheit* auf „Trotzdem öffnen" klicken —
+der Rechtsklick-auf-Öffnen-Trick funktioniert seit macOS 15 nicht mehr. Das steht so
+auch im Einladungstext.
 
 ## Technik in drei Sätzen
 

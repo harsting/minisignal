@@ -31,9 +31,12 @@ enum Invite {
             + "anderen den Bildschirm rot blinken lässt. Läuft nur über euer WLAN: kein Server, "
             + "kein Konto, nichts im Internet."
 
-        let gatekeeper = "Beim allerersten Start: Rechtsklick auf MiniSignal → \"Öffnen\" → "
-            + "nochmal \"Öffnen\". Die App ist nicht bei Apple registriert, deshalb fragt macOS "
-            + "einmal nach. Danach startet sie ganz normal. Wer lieber selbst baut: \(settings.repoURL)"
+        let gatekeeper = "Beim allerersten Öffnen sagt macOS, es könne die App nicht auf "
+            + "Schadsoftware prüfen. Dann: Systemeinstellungen → Datenschutz & Sicherheit → "
+            + "ganz nach unten scrollen → bei \"MiniSignal wurde blockiert\" auf "
+            + "\"Trotzdem öffnen\" klicken. Das ist nur einmal nötig. Grund: Die App ist nicht "
+            + "bei Apple registriert, weil sie niemand verkauft — sie ist nur für uns gebaut. "
+            + "Wer lieber selbst baut: \(settings.repoURL)"
 
         let network = "3) macOS fragt einmal, ob MiniSignal ins lokale Netzwerk darf. Erlauben — "
             + "sonst finden sich die Geräte nicht."
