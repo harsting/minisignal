@@ -233,3 +233,9 @@ auch im Einladungstext.
 - **„MiniSignal kann nicht geöffnet werden"** — passiert, wenn die fertige App vom
   anderen Mac kopiert wurde. Am saubersten ist, `./build.sh` einmal auf jedem Mac
   laufen zu lassen. Alternativ: `xattr -dr com.apple.quarantine MiniSignal.app`.
+
+## Lizenz
+
+[MIT](LICENSE) — benutzen, ändern und weitergeben ausdrücklich erlaubt, ohne
+Gewährleistung. Die Emoji stammen aus Apples Systemschrift und werden zur Laufzeit
+gerendert; sie sind nicht Teil dieses Projekts.
