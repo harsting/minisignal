@@ -39,6 +39,44 @@ final class Settings {
         set { defaults.set(newValue, forKey: "preferredCarrier") }
     }
 
+    // MARK: - Kurzbefehl
+
+    var hotkeyEnabled: Bool {
+        get { defaults.object(forKey: "hotkeyEnabled") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "hotkeyEnabled") }
+    }
+
+    /// Virtueller Tastencode (Carbon). Vorgabe: Leertaste.
+    var hotkeyKeyCode: UInt32 {
+        get { UInt32(defaults.object(forKey: "hotkeyKeyCode") as? Int ?? 49) }
+        set { defaults.set(Int(newValue), forKey: "hotkeyKeyCode") }
+    }
+
+    /// Modifier als Carbon-Maske. Vorgabe: ⌃⌥.
+    var hotkeyModifiers: UInt32 {
+        get { UInt32(defaults.object(forKey: "hotkeyModifiers") as? Int ?? (4096 | 2048)) }
+        set { defaults.set(Int(newValue), forKey: "hotkeyModifiers") }
+    }
+
+    /// Lesbare Form für die Anzeige, z. B. "⌃⌥Leertaste".
+    var hotkeyDisplay: String {
+        get { defaults.string(forKey: "hotkeyDisplay") ?? "⌃⌥Leertaste" }
+        set { defaults.set(newValue, forKey: "hotkeyDisplay") }
+    }
+
+    // MARK: - Einladung
+
+    var repoURL: String {
+        get { defaults.string(forKey: "repoURL") ?? "https://github.com/harsting/minisignal" }
+        set { defaults.set(newValue, forKey: "repoURL") }
+    }
+
+    var downloadURL: String {
+        get { defaults.string(forKey: "downloadURL")
+                ?? "https://github.com/harsting/minisignal/releases/latest" }
+        set { defaults.set(newValue, forKey: "downloadURL") }
+    }
+
     var soundsEnabled: Bool {
         get { defaults.object(forKey: "soundsEnabled") as? Bool ?? true }
         set { defaults.set(newValue, forKey: "soundsEnabled") }

@@ -9,12 +9,15 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let nameField = NSTextField()
     private let codeField = NSTextField()
     private let soundsCheck = NSButton(checkboxWithTitle: "Töne abspielen", target: nil, action: nil)
+    private let hotkeyCheck = NSButton(checkboxWithTitle: "Kurzbefehl zum Öffnen", target: nil, action: nil)
+    private let hotkeyButton = HotkeyRecorderButton(title: Settings.shared.hotkeyDisplay)
+    private var pendingHotkey: (code: UInt32, modifiers: UInt32, display: String)?
     private let loginCheck = NSButton(checkboxWithTitle: "Beim Anmelden starten", target: nil, action: nil)
     private let hint = NSTextField(wrappingLabelWithString: "")
 
     convenience init() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 300),
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 380),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -44,6 +47,21 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         codeField.stringValue = Settings.shared.pairingCode
 
         soundsCheck.state = Settings.shared.soundsEnabled ? .on : .off
+
+        hotkeyCheck.state = Settings.shared.hotkeyEnabled ? .on : .off
+        hotkeyCheck.target = self
+        hotkeyCheck.action = #selector(hotkeyToggled)
+        hotkeyButton.isEnabled = Settings.shared.hotkeyEnabled
+        hotkeyButton.toolTip = "Klicken, dann die gewünschte Tastenkombination drücken"
+        hotkeyButton.onCapture = { [weak self] keyCode, flags, characters in
+            guard let self else { return }
+            let display = HotkeyManager.describe(keyCode: keyCode, flags: flags,
+                                                 characters: characters)
+            self.pendingHotkey = (UInt32(keyCode),
+                                  HotkeyManager.carbonModifiers(from: flags),
+                                  display)
+            self.hotkeyButton.setRestingTitle(display)
+        }
         loginCheck.state = SettingsWindowController.launchesAtLogin ? .on : .off
 
         hint.font = .systemFont(ofSize: 11)
@@ -57,7 +75,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             title, explanation,
             labelled("Name", nameField),
             labelled("Paar-Code", codeField),
-            soundsCheck, loginCheck, hint, save
+            soundsCheck, hotkeyRow(), loginCheck, hint, save
         ])
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -76,6 +94,21 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             hint.widthAnchor.constraint(equalToConstant: 376)
         ])
         window.contentView = content
+    }
+
+    private func hotkeyRow() -> NSView {
+        hotkeyButton.translatesAutoresizingMaskIntoConstraints = false
+        hotkeyButton.widthAnchor.constraint(equalToConstant: 190).isActive = true
+
+        let row = NSStackView(views: [hotkeyCheck, hotkeyButton])
+        row.orientation = .horizontal
+        row.spacing = 10
+        row.alignment = .centerY
+        return row
+    }
+
+    @objc private func hotkeyToggled() {
+        hotkeyButton.isEnabled = hotkeyCheck.state == .on
     }
 
     private func labelled(_ caption: String, _ field: NSTextField) -> NSView {
@@ -111,6 +144,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         if !name.isEmpty { Settings.shared.displayName = name }
         Settings.shared.pairingCode = code
         Settings.shared.soundsEnabled = soundsCheck.state == .on
+        Settings.shared.hotkeyEnabled = hotkeyCheck.state == .on
+        if let pendingHotkey {
+            Settings.shared.hotkeyKeyCode = pendingHotkey.code
+            Settings.shared.hotkeyModifiers = pendingHotkey.modifiers
+            Settings.shared.hotkeyDisplay = pendingHotkey.display
+            self.pendingHotkey = nil
+        }
         SettingsWindowController.setLaunchesAtLogin(loginCheck.state == .on)
 
         hint.stringValue = "Gesichert."

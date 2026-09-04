@@ -6,27 +6,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let overlays = OverlayPresenter()
     private let peers = PeerService()
     private var settings: SettingsWindowController?
-    private var hotkey: Hotkey?
+    private var invite: InviteWindowController?
+    private var hotkey: HotkeyManager?
 
     private var me: String { Settings.shared.displayName }
+
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        // Beitritts-Links der Form minisignal://join?code=…&from=…
+        NSAppleEventManager.shared().setEventHandler(
+            self,
+            andSelector: #selector(handleURLEvent(_:with:)),
+            forEventClass: AEEventClass(kInternetEventClass),
+            andEventID: AEEventID(kAEGetURL)
+        )
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = StatusItemController()
 
-        statusItem.composer.onSend = { [weak self] text, carrierID in
-            self?.sendMessage(text: text, carrierID: carrierID)
+        statusItem.composer.onSend = { [weak self] text, carrierID, recipients in
+            self?.sendMessage(text: text, carrierID: carrierID, recipientIDs: recipients)
         }
-        statusItem.composer.onSOS = { [weak self] in self?.sendSOS() }
+        statusItem.composer.onSOS = { [weak self] recipients in
+            self?.sendSOS(recipientIDs: recipients)
+        }
         statusItem.onSettings = { [weak self] in self?.openSettings() }
+        statusItem.onInvite = { [weak self] in self?.openInvite() }
         statusItem.onSelfTest = { [weak self] in self?.previewLocally() }
 
-        overlays.onReply = { [weak self] text in self?.sendMessage(text: text, carrierID: nil) }
-        peers.onPresence = { [weak self] presence in self?.show(presence) }
+        overlays.onReply = { [weak self] text in
+            self?.sendMessage(text: text, carrierID: nil, recipientIDs: [])
+        }
+        peers.onPeersChanged = { [weak self] list, searching in
+            self?.showPeers(list, searching: searching)
+        }
         peers.onEnvelope = { [weak self] envelope in self?.handle(envelope) }
 
-        hotkey = Hotkey { [weak self] in self?.statusItem.togglePopover() }
+        hotkey = HotkeyManager { [weak self] in self?.statusItem.togglePopover() }
 
-        show(.searching)
+        showPeers([], searching: true)
         peers.start()
 
         if !Settings.shared.isConfigured {
@@ -44,35 +62,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Senden
 
-    private func sendMessage(text: String, carrierID: String?) {
+    private func targets(for ids: [String]) -> [PeerService.Peer] {
+        ids.compactMap { peers.peer(withID: $0) }
+    }
+
+    private func sendMessage(text: String, carrierID: String?, recipientIDs: [String]) {
         let envelope = Envelope(kind: .message, text: text, sender: me, carrier: carrierID)
         statusItem.composer.showResult("Bote unterwegs …", ok: true)
 
-        peers.send(envelope) { [weak self] result in
+        peers.send(envelope, to: targets(for: recipientIDs)) { [weak self] report in
             guard let self else { return }
-            switch result {
-            case .success:
+            if !report.delivered.isEmpty {
                 Sounds.playSent()
-                History.add(text: text, who: self.peers.peerDisplayName, incoming: false)
-                self.statusItem.composer.showResult("Angekommen ✓", ok: true)
-            case .failure(let error):
-                self.statusItem.composer.showResult(error.localizedDescription, ok: false)
+                History.add(text: text, who: PeerService.list(report.delivered), incoming: false)
             }
+            self.statusItem.composer.showResult(report.summary,
+                                                ok: !report.allFailed && !report.delivered.isEmpty)
         }
     }
 
-    private func sendSOS() {
+    private func sendSOS(recipientIDs: [String]) {
         let envelope = Envelope(kind: .sos, sender: me)
         statusItem.composer.showResult("SOS unterwegs …", ok: true)
 
-        peers.send(envelope) { [weak self] result in
+        peers.send(envelope, to: targets(for: recipientIDs)) { [weak self] report in
             guard let self else { return }
-            switch result {
-            case .success:
-                self.statusItem.composer.showResult("SOS zugestellt — warte auf Quittung", ok: true)
-            case .failure(let error):
-                self.statusItem.composer.showResult(error.localizedDescription, ok: false)
-            }
+            let text = report.delivered.isEmpty
+                ? report.summary
+                : "SOS bei \(PeerService.list(report.delivered)) — warte auf Quittung"
+            self.statusItem.composer.showResult(text, ok: !report.delivered.isEmpty)
         }
     }
 
@@ -89,9 +107,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             statusItem.flashIcon()
 
         case .sos:
+            let origin = peers.peer(withID: envelope.senderID)
             overlays.raiseSOS(from: envelope.sender) { [weak self] in
                 guard let self else { return }
-                self.peers.sendQuietly(Envelope(kind: .seen, sender: self.me))
+                self.peers.sendQuietly(Envelope(kind: .seen, sender: self.me), to: origin)
             }
             statusItem.flashIcon()
 
@@ -103,21 +122,62 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func show(_ presence: PeerService.Presence) {
-        switch presence {
-        case .notPaired:
-            statusItem.composer.setPresence("Noch nicht eingerichtet", online: false)
-        case .searching:
-            statusItem.composer.setPresence("Suche im WLAN …", online: false)
-        case .online(let name):
-            statusItem.composer.setPresence("\(name) ist da", online: true)
-            statusItem.composer.setHint(nil)
-        case .offline:
-            statusItem.composer.setPresence("Niemand gefunden", online: false)
+    private func showPeers(_ list: [PeerService.Peer], searching: Bool) {
+        statusItem.composer.setPeers(list, searching: searching)
+
+        if list.isEmpty && !searching && Settings.shared.isConfigured {
             statusItem.composer.setHint(
-                "Läuft MiniSignal auf dem anderen Mac? Sonst prüfen: Systemeinstellungen → "
+                "Läuft MiniSignal auf dem anderen Gerät? Sonst prüfen: Systemeinstellungen → "
                 + "Datenschutz & Sicherheit → Lokales Netzwerk.")
+        } else {
+            statusItem.composer.setHint(nil)
         }
+    }
+
+    // MARK: - Einladung annehmen
+
+    @objc private func handleURLEvent(_ event: NSAppleEventDescriptor,
+                                      with replyEvent: NSAppleEventDescriptor) {
+        guard let string = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue,
+              let url = URL(string: string),
+              url.scheme == Invite.scheme else { return }
+
+        guard url.host == "join",
+              let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems,
+              let code = items.first(where: { $0.name == "code" })?.value,
+              !code.isEmpty else { return }
+
+        let from = items.first(where: { $0.name == "from" })?.value ?? "Jemand"
+        DispatchQueue.main.async { [weak self] in self?.confirmJoin(code: code, from: from) }
+    }
+
+    private func confirmJoin(code: String, from: String) {
+        NSApp.activate(ignoringOtherApps: true)
+
+        if code == Settings.shared.pairingCode {
+            let done = NSAlert()
+            done.messageText = "Ihr seid schon verbunden"
+            done.informativeText = "Dieser Paar-Code ist bereits eingetragen."
+            done.addButton(withTitle: "Alles klar")
+            done.runModal()
+            return
+        }
+
+        let alert = NSAlert()
+        alert.messageText = "\(from) lädt dich zu MiniSignal ein"
+        alert.informativeText = Settings.shared.isConfigured
+            ? "Möchtest du den Paar-Code übernehmen? Deine bisherige Verbindung wird "
+              + "dadurch ersetzt — die Geräte mit dem alten Code erreichst du danach nicht mehr."
+            : "Möchtest du den Paar-Code übernehmen und MiniSignal einrichten?"
+        alert.addButton(withTitle: "Übernehmen")
+        alert.addButton(withTitle: "Abbrechen")
+        alert.alertStyle = .informational
+
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        Settings.shared.pairingCode = code
+        peers.restart()
+        openSettings()
     }
 
     // MARK: - Sonstiges
@@ -125,10 +185,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func openSettings() {
         if settings == nil {
             let controller = SettingsWindowController()
-            controller.onSaved = { [weak self] in self?.peers.restart() }
+            controller.onSaved = { [weak self] in
+                guard let self else { return }
+                self.peers.restart()
+                if self.hotkey?.apply() == false { self.reportHotkeyConflict() }
+            }
             settings = controller
         }
         settings?.present()
+    }
+
+    private func reportHotkeyConflict() {
+        let alert = NSAlert()
+        alert.messageText = "Kurzbefehl ist schon vergeben"
+        alert.informativeText = "\(Settings.shared.hotkeyDisplay) wird bereits von macOS oder "
+            + "einer anderen App benutzt. Wähl in den Einstellungen eine andere Kombination — "
+            + "bis dahin öffnest du MiniSignal über das 💌 in der Menüleiste."
+        alert.addButton(withTitle: "Alles klar")
+        alert.runModal()
+    }
+
+    private func openInvite() {
+        guard Settings.shared.isConfigured else {
+            let alert = NSAlert()
+            alert.messageText = "Erst einen Paar-Code festlegen"
+            alert.informativeText = "Die Einladung enthält euren Paar-Code — den gibt es "
+                + "noch nicht. Trag ihn in den Einstellungen ein."
+            alert.addButton(withTitle: "Einstellungen öffnen")
+            alert.addButton(withTitle: "Abbrechen")
+            if alert.runModal() == .alertFirstButtonReturn { openSettings() }
+            return
+        }
+
+        if invite == nil { invite = InviteWindowController() }
+        invite?.present()
     }
 
     /// Zeigt einen Boten nur auf dem eigenen Bildschirm — zum Ausprobieren.
@@ -139,7 +229,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Nur für Tests: MINISIGNAL_DEMO zeigt einen Boten lokal,
-    /// MINISIGNAL_SEND verschickt eine echte Nachricht an die Gegenstelle.
+    /// MINISIGNAL_SEND verschickt eine echte Nachricht an alle Gegenstellen.
     private func runDemoIfRequested() {
         let env = ProcessInfo.processInfo.environment
 
@@ -162,8 +252,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
                 guard let self else { return }
                 if demo == "popover" {
-                self.statusItem.showPopover()
-            } else if demo == "sos" {
+                    self.statusItem.showPopover()
+                } else if demo == "settings" {
+                    self.openSettings()
+                } else if demo == "invite" {
+                    self.openInvite()
+                } else if demo == "sos" {
                     self.overlays.raiseSOS(from: "Testfrau") {}
                 } else {
                     self.overlays.deliver(text: text, sender: "Testfrau",
@@ -177,9 +271,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
                 guard let self else { return }
                 let envelope = Envelope(kind: kind, text: outgoing, sender: self.me, carrier: demo)
-                NSLog("MiniSignal: sende Testnachricht, Präsenz = \(self.peers.presence)")
-                self.peers.send(envelope) { result in
-                    NSLog("MiniSignal: Ergebnis = \(result)")
+                NSLog("MiniSignal: sende Testnachricht an \(self.peers.peers.count) Gerät(e)")
+                self.peers.send(envelope) { report in
+                    NSLog("MiniSignal: Ergebnis = \(report.summary)")
                 }
             }
         }

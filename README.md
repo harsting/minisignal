@@ -60,11 +60,11 @@ in den Einstellungen des jeweiligen Macs, nie im Code.
 | | |
 |---|---|
 | 💌 in der Menüleiste | Fenster zum Schreiben öffnen |
-| ⌃⌥Leertaste | dasselbe, ohne Maus |
+| ⌃⌥Leertaste | dasselbe, ohne Maus — in den Einstellungen umlegbar oder ganz abschaltbar |
 | Emoji-Reihe | Boten wählen; 🎲 würfelt jedes Mal neu |
 | ⏎ | losschicken |
 | 🚨 SOS | rot blinkendes Overlay beim anderen |
-| Rechtsklick aufs Icon | Einstellungen, letzte Nachrichten, Testnachricht an mich, Beenden |
+| Rechtsklick aufs Icon | Einstellungen, Einladung, letzte Nachrichten, Testnachricht an mich, Beenden |
 
 Die Statuszeile oben im Fenster zeigt, ob der andere Mac gerade erreichbar ist.
 Ist er das nicht (zugeklappt, anderes WLAN), kommt sofort eine ehrliche Fehlermeldung —
@@ -93,6 +93,39 @@ von selbst auf.
 | 🦀 Krabbe | seitwärts | | |
 | 🦕 Dino | schwere Schritte | | |
 | 🦥 Faultier | hängt am Ast, 20 Sekunden | | |
+
+## Mehr als zwei Geräte
+
+Es dürfen beliebig viele mitmachen — alle mit demselben Paar-Code bilden einen Kreis
+und sehen sich gegenseitig. Sind mehr als zwei da, erscheint im Fenster eine Auswahl:
+an alle schicken oder gezielt an eine Person. Das gilt auch fürs SOS.
+
+Wer einen **anderen** Code einträgt, bildet einen eigenen Kreis und hat mit euch
+nichts zu tun — selbst im selben WLAN sehen sich die beiden Gruppen nicht. Dafür
+steht im Bonjour-Eintrag ein Fingerabdruck des Codes (nicht der Code selbst), und
+Geräte mit abweichendem Fingerabdruck werden ignoriert.
+
+## Jemanden einladen
+
+Rechtsklick aufs 💌 → **Jemanden einladen …**. Das erzeugt einen fertigen Text mit
+Download-Link, Einrichtungshinweisen und einem Beitritts-Link der Form
+`minisignal://join?code=…&from=…`. Ein Klick darauf trägt den Code beim Eingeladenen
+ein — nach Rückfrage, nichts passiert stillschweigend.
+
+Der Text enthält euren Paar-Code. Wer ihn hat, kann mitschreiben und mitlesen — also
+nur an Leute schicken, die dazugehören sollen. Soll jemand die App bloß für sich und
+seinen eigenen Partner nutzen, gibt er beim Einrichten einfach einen eigenen Code ein.
+
+## Eine Version zum Herunterladen bauen
+
+```bash
+./release.sh
+```
+
+Das baut die App und packt sie als `MiniSignal-<version>.zip`. Das Skript zeigt am
+Ende den `gh release create`-Befehl zum Hochladen. Weil die App nicht bei Apple
+notarisiert ist, muss der Empfänger sie beim ersten Mal per Rechtsklick → Öffnen
+starten; das steht so auch im Einladungstext.
 
 ## Technik in drei Sätzen
 

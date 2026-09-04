@@ -15,6 +15,9 @@ struct Envelope: Codable {
     var kind: Kind
     var text: String = ""
     var sender: String
+    /// Kennung des Absenders — damit Quittungen bei mehreren Geräten
+    /// beim richtigen landen. Optional, damit ältere Sendungen lesbar bleiben.
+    var senderID: String? = Settings.shared.instanceID
     var carrier: String? = nil
     var sentAt: Double = Date().timeIntervalSince1970
 }
@@ -45,6 +48,15 @@ enum Wire {
             info: Data("pairing".utf8),
             outputByteCount: 32
         )
+    }
+
+    /// Kurzer, öffentlich zeigbarer Fingerabdruck des Paar-Codes. Steht im
+    /// Bonjour-Eintrag, damit sich nur Geräte mit demselben Code gegenseitig sehen —
+    /// aus dem Fingerabdruck lässt sich der Code nicht zurückrechnen.
+    static func fingerprint(forCode code: String) -> String {
+        let normalized = code.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let digest = SHA256.hash(data: Data(("MiniSignal.fingerprint." + normalized).utf8))
+        return digest.prefix(8).map { String(format: "%02x", $0) }.joined()
     }
 
     static func seal(_ envelope: Envelope, code: String) throws -> Data {

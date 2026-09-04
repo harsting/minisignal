@@ -3,10 +3,12 @@ import AppKit
 /// Inhalt des Menüleisten-Popovers: Nachricht tippen, Boten wählen, abschicken — oder SOS.
 final class ComposerViewController: NSViewController {
 
-    var onSend: ((String, String?) -> Void)?
-    var onSOS: (() -> Void)?
+    /// Text, Boten-Kennung, Empfänger (leer = an alle).
+    var onSend: ((String, String?, [String]) -> Void)?
+    var onSOS: (([String]) -> Void)?
 
     private let statusLabel = NSTextField(labelWithString: "")
+    private let recipientPicker = NSPopUpButton()
     private let input = NSTextField()
     private let sendButton = NSButton()
     private let sosButton = NSButton()
@@ -17,6 +19,7 @@ final class ComposerViewController: NSViewController {
     private let carrierOrder: [Carrier?] = [nil] + Carriers.all
     private var carrierButtons: [NSButton] = []
     private var resultReset: DispatchWorkItem?
+    private var selectedRecipientID: String?
 
     private let buttonsPerRow = 6
     private let buttonSpacing: CGFloat = 4
@@ -27,6 +30,9 @@ final class ComposerViewController: NSViewController {
 
         statusLabel.font = .systemFont(ofSize: 12, weight: .medium)
         statusLabel.textColor = .secondaryLabelColor
+
+        recipientPicker.isHidden = true
+        recipientPicker.font = .systemFont(ofSize: 12)
 
         input.placeholderString = "Nachricht …"
         input.font = .systemFont(ofSize: 14)
@@ -61,7 +67,7 @@ final class ComposerViewController: NSViewController {
         separator.boxType = .separator
 
         let stack = NSStackView(views: [
-            statusLabel, input, makeCarrierGrid(), sendButton,
+            statusLabel, recipientPicker, input, makeCarrierGrid(), sendButton,
             separator, sosButton, resultLabel, hintLabel
         ])
         stack.orientation = .vertical
@@ -76,6 +82,7 @@ final class ComposerViewController: NSViewController {
             stack.trailingAnchor.constraint(equalTo: root.trailingAnchor),
             stack.topAnchor.constraint(equalTo: root.topAnchor),
             stack.bottomAnchor.constraint(equalTo: root.bottomAnchor),
+            recipientPicker.widthAnchor.constraint(equalToConstant: contentWidth),
             input.widthAnchor.constraint(equalToConstant: contentWidth),
             sendButton.widthAnchor.constraint(equalToConstant: contentWidth),
             separator.widthAnchor.constraint(equalToConstant: contentWidth),
@@ -132,8 +139,61 @@ final class ComposerViewController: NSViewController {
         view.window?.makeFirstResponder(input)
     }
 
-    func setPresence(_ text: String, online: Bool) {
-        statusLabel.stringValue = (online ? "🟢  " : "⚪️  ") + text
+    /// Anwesenheit anzeigen und die Empfängerauswahl nachziehen.
+    func setPeers(_ peers: [PeerService.Peer], searching: Bool) {
+        if !Settings.shared.isConfigured {
+            statusLabel.stringValue = "⚪️  Noch nicht eingerichtet"
+        } else if searching {
+            statusLabel.stringValue = "⚪️  Suche im WLAN …"
+        } else if peers.isEmpty {
+            statusLabel.stringValue = "⚪️  Niemand gefunden"
+        } else {
+            let verb = peers.count == 1 ? "ist" : "sind"
+            let names = PeerService.list(peers.map(\.name))
+            statusLabel.stringValue = "🟢  \(names) \(verb) da"
+        }
+
+        rebuildRecipients(peers)
+    }
+
+    private func rebuildRecipients(_ peers: [PeerService.Peer]) {
+        // Bei nur einem Gegenüber braucht es keine Auswahl.
+        recipientPicker.isHidden = peers.count < 2
+        guard peers.count >= 2 else {
+            selectedRecipientID = nil
+            return
+        }
+
+        let previous = selectedRecipientID
+        recipientPicker.removeAllItems()
+        recipientPicker.addItem(withTitle: "An alle (\(peers.count))")
+        recipientPicker.lastItem?.representedObject = nil
+        for peer in peers {
+            recipientPicker.addItem(withTitle: "Nur an \(peer.name)")
+            recipientPicker.lastItem?.representedObject = peer.id
+        }
+        recipientPicker.target = self
+        recipientPicker.action = #selector(recipientChanged)
+
+        if let previous,
+           let index = recipientPicker.itemArray.firstIndex(where: {
+               $0.representedObject as? String == previous
+           }) {
+            recipientPicker.selectItem(at: index)
+        } else {
+            recipientPicker.selectItem(at: 0)
+            selectedRecipientID = nil
+        }
+    }
+
+    @objc private func recipientChanged() {
+        selectedRecipientID = recipientPicker.selectedItem?.representedObject as? String
+    }
+
+    /// Leer = an alle.
+    private func selectedRecipients() -> [String] {
+        guard let selectedRecipientID else { return [] }
+        return [selectedRecipientID]
     }
 
     /// Dauerhafter Hinweis unter dem SOS-Knopf, z. B. wenn niemand gefunden wird.
@@ -157,11 +217,11 @@ final class ComposerViewController: NSViewController {
         let text = input.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         input.stringValue = ""
-        onSend?(text, selectedCarrierID())
+        onSend?(text, selectedCarrierID(), selectedRecipients())
     }
 
     @objc private func sos() {
-        onSOS?()
+        onSOS?(selectedRecipients())
     }
 
     @objc private func carrierTapped(_ sender: NSButton) {

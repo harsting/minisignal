@@ -8,6 +8,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     let composer = ComposerViewController()
 
     var onSettings: (() -> Void)?
+    var onInvite: (() -> Void)?
     var onSelfTest: (() -> Void)?
 
     override init() {
@@ -54,6 +55,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         let menu = NSMenu()
         menu.addItem(withTitle: "Einstellungen …", action: #selector(openSettings), keyEquivalent: ",")
             .target = self
+        menu.addItem(withTitle: "Jemanden einladen …", action: #selector(invite), keyEquivalent: "i")
+            .target = self
         menu.addItem(withTitle: "Testnachricht an mich", action: #selector(selfTest), keyEquivalent: "t")
             .target = self
         let recent = History.all()
@@ -82,6 +85,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     }
 
     @objc private func openSettings() { onSettings?() }
+    @objc private func invite() { onInvite?() }
     @objc private func selfTest() { onSelfTest?() }
     @objc private func quit() { NSApp.terminate(nil) }
 }
