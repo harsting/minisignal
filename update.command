@@ -26,7 +26,12 @@ rm -rf "$TARGET"
 ditto MiniSignal.app "$TARGET"
 
 echo "==> Starte neu ..."
-open "$TARGET"
+# Direkt nach dem Austausch braucht LaunchServices manchmal einen Moment,
+# sonst kommt "failed with error -600".
+for versuch in 1 2 3; do
+    if open "$TARGET" 2>/dev/null; then break; fi
+    sleep 1
+done
 
 echo
 echo "Fertig — MiniSignal läuft jetzt in Version $(/usr/libexec/PlistBuddy \
